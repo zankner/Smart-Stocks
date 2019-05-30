@@ -6,6 +6,7 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import CuDNNLSTM
 from tensorflow.keras import Model
 tf.keras.backend.clear_session()
 
@@ -35,18 +36,21 @@ EPOCHS = 50
 # In[3]:
 
 
-class word_2_vec(Model):
+class numerical_lstm(Model):
     def __init__(self):
-        super(word_2_vec, self).__init__()
-        self.dense_1 = Dense(embedding_dim)
-        self.dense_2 = Dense(num_features,activation='softmax')
-        
+        super(numerical_lstm, self).__init__()
+        self.lstm_1 = CuDNNLSTM(lstm_cells_layer_1,return_sequences=True)
+        self.lstm_2 = CuDNNLSTM(lstm_cells_layer_2)
+        self.dense_1 = Dense(hidden_dim_1,activation='softmax')
+        self.dense_2 = Dense(output_dim) 
     def call(self, x):
+        x = self.lstm_1(x)
+        x = self.lstm_2(x)
         x = self.dense_1(x)
         x = self.dense_2(x)
         return x
 
-model = word_2_vec()
+model = numerical_lstm()
 
 
 # In[4]:
@@ -60,10 +64,10 @@ optimizer = tf.keras.optimizers.Adam()
 
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.CategoricalAccuracy(name='train_accuracy')
+train_accuracy = tf.keras.metrics.Acuracy(name='train_accuracy')
 
 test_loss = tf.keras.metrics.Mean(name='test_loss')
-test_accuracy = tf.keras.metrics.CategoricalAccuracy(name='test_accuracy')
+test_accuracy = tf.keras.metrics.Accuracy(name='test_accuracy')
 
 
 # In[7]:
@@ -71,23 +75,23 @@ test_accuracy = tf.keras.metrics.CategoricalAccuracy(name='test_accuracy')
 
 @tf.function
 def train_step(inputs, labels):
-  with tf.GradientTape() as tape:
-    predictions = model(inputs)
-    loss = loss_object(labels, predictions)
-  gradients = tape.gradient(loss, model.trainable_variables)
-  optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-  train_loss(loss)
-  train_accuracy(labels, predictions)
+    with tf.GradientTape() as tape:
+        predictions = model(inputs)
+        loss = loss_object(labels, predictions)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    train_loss(loss)
+    train_accuracy(labels, predictions)
 
 
 # In [8]:
 
 @tf.function
 def test_step(test_inputs, test_labels):
-  test_predictions = model(test_inputs)
-  t_loss = loss_object(test_labels, test_predictions)
-  test_loss(t_loss)
-  test_accuracy(test_labels, test_predictions)
+    test_predictions = model(test_inputs)
+    t_loss = loss_object(test_labels, test_predictions)
+    test_loss(t_loss)
+    test_accuracy(test_labels, test_predictions)
 
 
 # In [9]:
@@ -104,6 +108,3 @@ for epoch in range(EPOCHS):
     print(template.format(epoch+1,train_loss.result(),train_accuracy.result()*100,test_loss.result(),test_accuracy.result()*100))
 
 model.save_weights(save_path,save_format='tf')
-
-new_model = word_2_vec()
-new_model.load_weights(save_path)
