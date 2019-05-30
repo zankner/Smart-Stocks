@@ -75,23 +75,23 @@ test_accuracy = tf.keras.metrics.Accuracy(name='test_accuracy')
 
 @tf.function
 def train_step(inputs, labels):
-  with tf.GradientTape() as tape:
-    predictions = model(inputs)
-    loss = loss_object(labels, predictions)
-  gradients = tape.gradient(loss, model.trainable_variables)
-  optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-  train_loss(loss)
-  train_accuracy(labels, predictions)
+    with tf.GradientTape() as tape:
+        predictions = model(inputs)
+        loss = loss_object(labels, predictions)
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    train_loss(loss)
+    train_accuracy(labels, predictions)
 
 
 # In [8]:
 
 @tf.function
 def test_step(test_inputs, test_labels):
-  test_predictions = model(test_inputs)
-  t_loss = loss_object(test_labels, test_predictions)
-  test_loss(t_loss)
-  test_accuracy(test_labels, test_predictions)
+    test_predictions = model(test_inputs)
+    t_loss = loss_object(test_labels, test_predictions)
+    test_loss(t_loss)
+    test_accuracy(test_labels, test_predictions)
 
 
 # In [9]:
