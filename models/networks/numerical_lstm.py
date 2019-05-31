@@ -25,8 +25,6 @@ test_ds = input_fn('data/test_input_path.txt','data/test_output_path.txt',{'batc
 
 # In[11]:
 
-
-
 embedding_dim = 300
 num_features = 6120
 save_path = 'saved_models/word2vec_model'
