@@ -1,92 +1,61 @@
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import json
 
 from sklearn.model_selection import train_test_split
 
-def unload_data(data_path,input_path,output_path):
+def unload_data(data_path,train_input_file,train_output_file,test_input_file,test_output_file):
     inputs = []
     outputs = []
+    with open(data_path,'r') as f:
+        data = json.load(f)
+    data = [cleaned_data for cleaned_data in data if cleaned_data['volume'][0] != '-']
+    for index in range(len(data)):
+        if len(data) - index > 11:
+            input_buffer = []
+            for row in data[index+1:index+11]:
+                temp_buffer = []
+                temp_buffer.append(float(row['open'][0]))
+                temp_buffer.append(float(row['close'][0]))
+                temp_buffer.append(float(row['high'][0]))
+                temp_buffer.append(float(row['low'][0]))
+                temp_buffer.append(float(row['volume'][0].replace(',','')))
+                temp_buffer.append(float(row['mark_cap'][0].replace(',','')))
+                input_buffer.append(temp_buffer)
+            inputs.append(input_buffer)
+            outputs.append(data[index]['close'][0])
+    inputs = np.asarray(inputs) 
+    outputs = np.asarray(outputs) 
 
-    df = pd.read_csv(data_path).values
-    for row in df:
-        print(df)
-    '''
-    print 'input size: {},output size: {},vocab size: {}'.format(len(inputs),len(outputs),len(unique))
-
+    print('input size: {},output size: {}'.format(len(inputs),len(outputs)))
+    
     x_train, x_test, y_train, y_test = train_test_split(inputs, outputs, test_size = 0.15)
-  
-    for counter,input_,output in enumerate(zip(x_train,y_train)):
-        with open(input_path+'_train_'+str(counter)+'.npy','w') as f:
-            np.save(f,input_)
-        with open(output_path+'_train_'+str(counter)+'.npy','w') as f:
-            np.save(f,output)
-        train_input_paths.append('data/inputs_train_'+str(counter)+'.npy')
-        train_output_paths.append('data/outputs_train_'+str(counter)+'.npy')
-
-    for counter,input_,output in enumerate(zip(x_test,y_test)):
-        with open(input_path+'_test_'+str(counter)+'.npy','w') as f:
-            np.save(f,input_)
-        with open(output_path+'_test_'+str(counter)+'.npy','w') as f:
-            np.save(f,output)
-        test_input_paths.append('data/inputs_test_'+str(counter)+'.npy')
-        test_output_paths.append('data/outputs_test_'+str(counter)+'.npy')
-
-
-    with open(train_input_path_storage, 'a') as f:
-        for i in train_input_paths:
-            f.write(i+'\n')
-
-    with open(train_output_path_storage, 'a') as f:
-        for o in train_output_paths:
-            f.write(o+'\n')
-   
-    with open(test_input_path_storage, 'a') as f:
-        for i in test_input_paths:
-            f.write(i+'\n')
-
-    with open(test_output_path_storage, 'a') as f:
-        for o in test_output_paths:
-            f.write(o+'\n')
-   
-    with open(vocab_path, 'a') as f:
-        for v in unique:
-            f.write(v+'\n')
-    '''
-
-def read_npy_file(x,y):
-    inp = np.load(x.numpy())
-    output = np.load(y.numpy())
-    return inp.astype(np.float32),output.astype(np.float32)
+        
+    np.save(train_input_file,x_train)
+    np.save(train_output_file,y_train)
+    np.save(test_input_file,x_test)
+    np.save(test_output_file,y_test)
+    
 
 def input_fn(input_path,output_path,params):
-    num_elements = sum(1 for line in open(input_path))
-    num_labels = sum(1 for line in open(output_path))
+    
+    inputs = np.load(input_path)
+    outputs = np.load(output_path)
 
-    assert num_elements == num_labels
+    print(inputs)
 
-    input_paths = []
-    output_paths = []
-
-    with open(input_path) as f:
-        for line in f:
-            input_paths.append(line[:-1])
-    with open(output_path) as f:
-        for line in f:
-            output_paths.append(line[:-1])
-   
-    input_paths = input_paths[:10000]
-    output_paths = output_paths[:10000]
+    assert inputs.shape[0] == outputs.shape[0]
 
     with tf.device('/cpu:0'):
-        dataset = (tf.data.Dataset.from_tensor_slices((input_paths,output_paths))
-                .map(lambda x,y: tuple(tf.py_function(read_npy_file, [x,y], [tf.float32,tf.float32])),num_parallel_calls=3)
-                .shuffle(num_elements)
+        dataset = (tf.data.Dataset.from_tensor_slices((inputs,outputs))
+                .shuffle(inputs.shape[0])
                 .batch(params['batch_size'])
                 .prefetch(params['buffer_size'])
                 )
 
     return dataset
 
-unload_data('data/bitcoin_price.csv',3,4)
-#data = input_fn('../data/train_input_paths.txt','../data/train_output_paths.txt',{'batch_size':1,'buffer_size':10})
+#unload_data('data/historical_data.json','data/train_inputs.npy','data/train_outputs.npy',
+#        'data/test_inputs.npy','data/test_outpus.npy')
+data = input_fn('data/train_inputs.npy','data/train_outputs.npy',{'batch_size':32,'buffer_size':1})
