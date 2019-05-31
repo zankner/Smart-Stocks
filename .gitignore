@@ -2,6 +2,10 @@
 # Created by https://www.gitignore.io/api/macos,flask,python
 # Edit at https://www.gitignore.io/?templates=macos,flask,python
 
+#Files
+/bin/
+pyvenv.cfg
+
 ### Flask ###
 instance/*
 !instance/.gitignore
