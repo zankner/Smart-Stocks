@@ -5,6 +5,7 @@
 #Files
 /bin/
 pyvenv.cfg
+sentiment_data.csv
 
 ### Flask ###
 instance/*
